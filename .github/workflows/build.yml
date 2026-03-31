@@ -18,7 +18,7 @@ jobs:
 
     - name: Clone LineageOS Kernel
       run: |
-        git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 -b lineage-21 kernel_workspace
+        git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 -b lineage-20 kernel_workspace
         
     - name: Download Clang Compiler
       run: |
