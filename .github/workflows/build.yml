@@ -48,6 +48,7 @@ jobs:
 
     - name: Compile Kernel
       run: |
+        sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
         export PATH=$(pwd)/clang/bin:$PATH
         export ARCH=arm64
         export SUBARCH=arm64
@@ -56,8 +57,9 @@ jobs:
         export CC=clang
         
         cd kernel_workspace
-        make O=out vendor/diting_GKI.config 
-        make O=out -j$(nproc --all)
+        make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 vendor/diting_GKI.config 
+        make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all)
+
 
     - name: Upload Kernel Image
       uses: actions/upload-artifact@v4
