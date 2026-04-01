@@ -1,4 +1,4 @@
-name: Build NetHunter Kernel (Anti-Crash with SWAP)
+name: Build NetHunter Kernel (Final Masterpiece)
 on:
   workflow_dispatch:
 
@@ -6,29 +6,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Add 10GB Extra RAM (SWAP - CRITICAL)
+    - name: Free Space & Create Swap (Bulletproof)
       run: |
-        sudo fallocate -l 10G /swapfile
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
-
-    - name: Free Disk Space
-      run: |
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        # 1. Sab se pehle kachra saaf karo taake space banay
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
         sudo apt-get clean
-
-    - name: Checkout Source
-      run: |
-        git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 kernel_workspace
-        git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git AnyKernel3
+        
+        # 2. Check disk space (Safety)
+        df -h
+        
+        # 3. 8GB Swap file bnao /mnt/ par (jahan guaranteed space hoti hai)
+        sudo dd if=/dev/zero of=/mnt/swapfile bs=1M count=8192
+        sudo chmod 600 /mnt/swapfile
+        sudo mkswap /mnt/swapfile
+        sudo swapon /mnt/swapfile
+        
+        # 4. Check RAM and Swap (Safety)
+        free -h
 
     - name: Setup Build Environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y git ccache flex bison gperf build-essential zip curl libssl-dev bc libc6-dev-i386 python3 clang llvm lld
+        sudo apt-get install -y git ccache flex bison gperf build-essential zip curl bc libc6-dev-i386 python3 clang llvm lld
 
-    - name: Apply RT5370 Config
+    - name: Checkout Source (LineageOS SM8450)
+      run: |
+        git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 kernel_workspace
+        git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git AnyKernel3
+
+    - name: Apply RT5370 Config (Diting)
       run: |
         cd kernel_workspace
         CONFIG_FILE="arch/arm64/configs/vendor/diting_GKI.config"
@@ -43,8 +49,12 @@ jobs:
         cd kernel_workspace
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
+        
+        # Proper cleaning before build
+        make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 mrproper
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 gki_defconfig vendor/diting_GKI.config
-        # Compiling with memory safety
+        
+        # Strictly limited to 2 cores (-j2) to ensure it NEVER crashes the server
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 -j2 Image
 
     - name: Pack and Upload
@@ -52,11 +62,12 @@ jobs:
         cp kernel_workspace/out/arch/arm64/boot/Image AnyKernel3/
         cd AnyKernel3
         sed -i 's/device.name1=maguro/device.name1=diting/g' anykernel.sh
+        sed -i 's/device.name2=toro/device.name2=sm8475/g' anykernel.sh
         sed -i 's/is_slot_device=0;/is_slot_device=1;/g' anykernel.sh
-        zip -r9 NetHunter-Diting.zip *
+        zip -r9 NetHunter-Kernel-Diting.zip * -x .git README.md
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: NetHunter-Kernel-Diting
-        path: AnyKernel3/NetHunter-Diting.zip
+        path: AnyKernel3/NetHunter-Kernel-Diting.zip
