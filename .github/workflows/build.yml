@@ -22,22 +22,16 @@ jobs:
         
     - name: Apply RT5370 Modifications
       run: |
-        # Sahi config file dhoondna
-        CONFIG_FILE=$(find arch/arm64/configs -name "diting_defconfig" -o -name "gki_defconfig" -o -name "diting_GKI.config" | head -n 1)
-        
-        if [ -z "$CONFIG_FILE" ]; then
-          echo "Error: Config file nahi mili!"
-          exit 1
-        fi
-        
-        echo "Found Config: $CONFIG_FILE"
+        # Ab hum Base (bari) file mein driver daal rahe hain
+        CONFIG_FILE="arch/arm64/configs/gki_defconfig"
+
         echo "CONFIG_CFG80211=y" >> $CONFIG_FILE
         echo "CONFIG_MAC80211=y" >> $CONFIG_FILE
         echo "CONFIG_MAC80211_MONITOR=y" >> $CONFIG_FILE
         echo "CONFIG_WLAN_VENDOR_RALINK=y" >> $CONFIG_FILE
         echo "CONFIG_RT2X00=y" >> $CONFIG_FILE
         echo "CONFIG_RT2800USB=y" >> $CONFIG_FILE
-        echo "Modifications added successfully!"
+        echo "Modifications added successfully to gki_defconfig!"
 
     - name: Compile Kernel
       run: |
@@ -46,10 +40,11 @@ jobs:
         export SUBARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
-        
-        # Sahi config name nikalna build ke liye
-        CONFIG_NAME=$(find arch/arm64/configs -name "diting_defconfig" -o -name "gki_defconfig" -o -name "diting_GKI.config" -exec basename {} \+)
-        
+
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 mrproper
-        make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 $CONFIG_NAME
+        
+        # YAHAN MAGIC HOGA: Dono files ko mix kar rahe hain!
+        make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 gki_defconfig vendor/diting_GKI.config
+        
+        # Aur ab pakana shuru
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all)
