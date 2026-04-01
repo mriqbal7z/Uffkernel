@@ -1,4 +1,4 @@
-name: Build NetHunter Kernel
+name: Build NetHunter Kernel (Diting / SM8475)
 on:
   workflow_dispatch:
 
@@ -10,39 +10,40 @@ jobs:
       run: |
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo apt-get clean
-        
-        # NAYA RASTA AUR NAAM: /mnt/swap.img taake system block na kare
         sudo dd if=/dev/zero of=/mnt/swap.img bs=1M count=10240
         sudo chmod 600 /mnt/swap.img
         sudo mkswap /mnt/swap.img
         sudo swapon /mnt/swap.img
-        echo "10GB Swap Space Added Successfully!"
 
     - name: Setup Build Environment
       run: |
         sudo apt-get update
         sudo apt-get install -y git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3 llvm lld clang
 
-    - name: Clone Kernel Source
+    - name: Clone Kernel Source (SM8450 Tree for Diting)
       run: |
         git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 kernel_workspace
 
-    - name: Download Clang Compiler
+    - name: Download Modern Clang (For Android 16/GKI)
       run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+        git clone --depth=1 https://gitlab.com/muralidharan98/clang-llvm.git clang
 
-    - name: Apply RT5370 Modifications
+    - name: Download AnyKernel3 (For Flashable ZIP)
+      run: |
+        git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git AnyKernel3
+
+    - name: Apply RT5370 Modifications (Safe Diting Injection)
       run: |
         cd kernel_workspace
-        CONFIG_FILE="arch/arm64/configs/gki_defconfig"
-
+        # Injecting strictly into diting config to bypass GKI mismatch
+        CONFIG_FILE="arch/arm64/configs/vendor/diting_GKI.config"
+        
         echo "CONFIG_CFG80211=y" >> $CONFIG_FILE
         echo "CONFIG_MAC80211=y" >> $CONFIG_FILE
         echo "CONFIG_MAC80211_MONITOR=y" >> $CONFIG_FILE
         echo "CONFIG_WLAN_VENDOR_RALINK=y" >> $CONFIG_FILE
         echo "CONFIG_RT2X00=y" >> $CONFIG_FILE
         echo "CONFIG_RT2800USB=y" >> $CONFIG_FILE
-        echo "Modifications added successfully to gki_defconfig!"
 
     - name: Compile Kernel
       run: |
@@ -55,12 +56,31 @@ jobs:
         cd kernel_workspace
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 mrproper
         
+        # Targeting Diting Specifically
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 gki_defconfig vendor/diting_GKI.config
         
+        # Build the kernel
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all)
 
-    - name: Upload Kernel Image
+    - name: Pack with AnyKernel3 (Fixing SM8475 Conflict)
+      run: |
+        cd AnyKernel3
+        
+        # Force AnyKernel to recognize Xiaomi 12T Pro and its A/B Slots
+        sed -i 's/device.name1=maguro/device.name1=diting/g' anykernel.sh
+        sed -i 's/device.name2=toro/device.name2=sm8475/g' anykernel.sh
+        sed -i 's/device.name3=toroplus/device.name3=sm8450/g' anykernel.sh
+        sed -i 's/block=\/dev\/block\/platform\/omap\/omap_hsmmc.0\/by-name\/boot;/block=auto;/g' anykernel.sh
+        sed -i 's/is_slot_device=0;/is_slot_device=1;/g' anykernel.sh
+        
+        # Copy compiled image into AnyKernel folder
+        cp ../kernel_workspace/out/arch/arm64/boot/Image ./
+        
+        # Create the final flashable ZIP
+        zip -r9 UPDATE-AnyKernel3-Diting.zip * -x .git README.md *placeholder
+
+    - name: Upload Flashable Kernel ZIP
       uses: actions/upload-artifact@v4
       with:
-        name: NetHunter-Kernel-${{ github.run_id }}
-        path: kernel_workspace/out/arch/arm64/boot/Image
+        name: NetHunter-Kernel-Diting-Flashable
+        path: AnyKernel3/UPDATE-AnyKernel3-Diting.zip
