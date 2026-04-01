@@ -4,30 +4,30 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - name: Free Disk Space & Add Extra RAM (SWAP)
+    - name: Free Disk Space
       run: |
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo apt-get clean
-        sudo dd if=/dev/zero of=/mnt/swap.img bs=1M count=10240
-        sudo chmod 600 /mnt/swap.img
-        sudo mkswap /mnt/swap.img
-        sudo swapon /mnt/swap.img
 
     - name: Setup Build Environment
       run: |
         sudo apt-get update
         sudo apt-get install -y git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3 llvm lld clang
 
-    - name: Clone Kernel Source (SM8450 Tree for Diting)
+    - name: Clone Kernel Source
       run: |
         git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 kernel_workspace
 
-    - name: Download Stable AOSP Clang (Mirror)
+    - name: Download Toolchain (Direct Tarball - No Git Clone)
       run: |
-        # Using a reliable mirror to bypass Google's 503 error
-        git clone --depth=1 https://github.com/Zyra-Project/Zyra-Clang clang
+        mkdir clang
+        cd clang
+        # Downloading a verified pre-built clang tarball to avoid 'git clone' authentication issues
+        curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r487747c.tar.gz
+        tar -xf clang-r487747c.tar.gz
+        rm clang-r487747c.tar.gz
 
     - name: Download AnyKernel3
       run: |
@@ -61,13 +61,12 @@ jobs:
         cd AnyKernel3
         sed -i 's/device.name1=maguro/device.name1=diting/g' anykernel.sh
         sed -i 's/device.name2=toro/device.name2=sm8475/g' anykernel.sh
-        sed -i 's/device.name3=toroplus/device.name3=sm8450/g' anykernel.sh
         sed -i 's/is_slot_device=0;/is_slot_device=1;/g' anykernel.sh
         cp ../kernel_workspace/out/arch/arm64/boot/Image ./
-        zip -r9 UPDATE-NetHunter-Diting.zip * -x .git README.md
+        zip -r9 NetHunter-Kernel-Diting.zip * -x .git README.md
 
     - name: Upload Kernel
       uses: actions/upload-artifact@v4
       with:
         name: NetHunter-Kernel-Diting
-        path: AnyKernel3/UPDATE-NetHunter-Diting.zip
+        path: AnyKernel3/NetHunter-Kernel-Diting.zip
