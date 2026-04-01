@@ -24,9 +24,9 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 kernel_workspace
 
-    - name: Download Modern Clang (For Android 16/GKI)
+    - name: Download Modern Clang (Neutron - For Android 16/GKI)
       run: |
-        git clone --depth=1 https://gitlab.com/muralidharan98/clang-llvm.git clang
+        git clone --depth=1 https://github.com/Neutron-Toolchains/clang.git clang
 
     - name: Download AnyKernel3 (For Flashable ZIP)
       run: |
@@ -35,7 +35,6 @@ jobs:
     - name: Apply RT5370 Modifications (Safe Diting Injection)
       run: |
         cd kernel_workspace
-        # Injecting strictly into diting config to bypass GKI mismatch
         CONFIG_FILE="arch/arm64/configs/vendor/diting_GKI.config"
         
         echo "CONFIG_CFG80211=y" >> $CONFIG_FILE
