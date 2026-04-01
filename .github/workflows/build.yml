@@ -11,11 +11,11 @@ jobs:
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo apt-get clean
         
-        # 'fallocate' ki jagah hum dheet 'dd' command use kar rahe hain
-        sudo dd if=/dev/zero of=/swapfile bs=1M count=10240
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
+        # NAYA RASTA AUR NAAM: /mnt/swap.img taake system block na kare
+        sudo dd if=/dev/zero of=/mnt/swap.img bs=1M count=10240
+        sudo chmod 600 /mnt/swap.img
+        sudo mkswap /mnt/swap.img
+        sudo swapon /mnt/swap.img
         echo "10GB Swap Space Added Successfully!"
 
     - name: Setup Build Environment
