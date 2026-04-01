@@ -20,13 +20,10 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 kernel_workspace
 
-    - name: Download Toolchain (Direct Tarball)
+    - name: Download Toolchain (Stable AOSP Clang Mirror)
       run: |
-        mkdir clang
-        cd clang
-        curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r487747c.tar.gz
-        tar -xf clang-r487747c.tar.gz
-        rm clang-r487747c.tar.gz
+        # Using a highly stable mirror to avoid Google's 503/404 errors
+        git clone --depth=1 https://github.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r487747c clang
 
     - name: Download AnyKernel3
       run: |
