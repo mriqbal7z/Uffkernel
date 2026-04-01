@@ -20,11 +20,6 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/LineageOS/android_kernel_xiaomi_sm8450 kernel_workspace
 
-    - name: Download Toolchain (Stable AOSP Clang Mirror)
-      run: |
-        # Using a highly stable mirror to avoid Google's 503/404 errors
-        git clone --depth=1 https://github.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r487747c clang
-
     - name: Download AnyKernel3
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git AnyKernel3
@@ -40,25 +35,30 @@ jobs:
         echo "CONFIG_RT2X00=y" >> $CONFIG_FILE
         echo "CONFIG_RT2800USB=y" >> $CONFIG_FILE
 
-    - name: Compile Kernel
+    - name: Compile Kernel (Using Built-in Clang)
       run: |
-        export PATH=$(pwd)/clang/bin:$PATH
         export ARCH=arm64
         export SUBARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+        
         cd kernel_workspace
+        # Pre-cleaning the environment
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 mrproper
+        
+        # Targetting Diting specifically with GKI configs
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 gki_defconfig vendor/diting_GKI.config
+        
+        # Start compilation
         make O=out ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 -j$(nproc --all)
 
     - name: Pack with AnyKernel3
       run: |
         cd AnyKernel3
+        # Direct patching for Xiaomi 12T Pro
         sed -i 's/device.name1=maguro/device.name1=diting/g' anykernel.sh
         sed -i 's/device.name2=toro/device.name2=sm8475/g' anykernel.sh
         sed -i 's/is_slot_device=0;/is_slot_device=1;/g' anykernel.sh
-        cp ../kernel_workspace/out/arch/arm64/boot/Image ./
+        cp ../kernel_workspace/out/arch/arch/arm64/boot/Image ./
         zip -r9 NetHunter-Kernel-Diting.zip * -x .git README.md
 
     - name: Upload Kernel
